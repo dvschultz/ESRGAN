@@ -1,0 +1,7 @@
+name: ESRGAN
+description: Enhanced Super-Resolution Generative Adversarial Networks
+license: Apache-2.0
+base: python3.7
+entrypoint: python model.py
+build_steps:
+  - pip install -r requirements.txt
