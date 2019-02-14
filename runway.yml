@@ -1,13 +1,8 @@
-name: ESRGAN
-description: Enhanced Super-Resolution Generative Adversarial Networks
-license: Apache-2.0
-cuda: 9.2
-python: 3.7
-entrypoint: python model.py
+cuda: 9.0
+python: 3.6
+entrypoint: model.py
 files:
   ignore:
     - LR/*
     - figures/*
     - results/*
-build_steps:
-  - pip install -r requirements.txt
