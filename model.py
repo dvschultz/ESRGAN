@@ -39,7 +39,8 @@ def process_tile(model, tile):
     img = img.unsqueeze(0)
     img = img.to(device)
     output = model(img).data.squeeze().float().cpu().clamp_(0, 1).numpy()
-    output = resize(output, img.shape)
+    output = np.transpose(output[[2, 1, 0], :, :], (1, 2, 0))
+    output = resize(output, tile.shape)
     return output
 
 @runway.command(name='upscale', inputs={'image': runway.image}, outputs={'upscaled': runway.image})
@@ -49,7 +50,6 @@ def upscale(model, inputs):
     tiler = ImageSlicer(img.shape, tile_size=(512, 512), tile_step=(256, 256), weight='pyramid')
     tiles = [process_tile(model, tile) for tile in tiler.split(img)]
     output = tiler.merge(tiles)
-    output = np.transpose(output[[2, 1, 0], :, :], (1, 2, 0))
     output = (output * 255.0).round().astype('uint8')
     return dict(upscaled=output)
 
