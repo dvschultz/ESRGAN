@@ -3,7 +3,8 @@ import numpy as np
 import torch
 import architecture as arch
 import runway
-
+from tiles import ImageSlicer
+from skimage.transform import resize
 
 if torch.cuda.is_available():
     print('Using GPU')
@@ -13,7 +14,7 @@ else:
     device = torch.device('cpu')
 
 
-@runway.setup(options={'interpolationFactor': 'float'})
+@runway.setup(options={'interpolationFactor': runway.number(default=0.8, min=0, max=1, step=0.01)})
 def setup(opts):
     net_PSNR_path = './models/RRDB_PSNR_x4.pth'
     net_ESRGAN_path = './models/RRDB_ESRGAN_x4.pth'
@@ -32,15 +33,25 @@ def setup(opts):
     model = model.to(device)
     return model
 
+def process_tile(model, tile):
+    img = np.transpose(tile[:, :, [2, 1, 0]], (2, 0, 1))
+    img = torch.from_numpy(img).float()
+    img = img.unsqueeze(0)
+    img = img.to(device)
+    output = model(img).data.squeeze().float().cpu().clamp_(0, 1).numpy()
+    output = resize(output, img.shape)
+    return output
 
-@runway.command(name='upscale', inputs={'image': 'image'}, outputs={'upscaled': 'image'})
+@runway.command(name='upscale', inputs={'image': runway.image}, outputs={'upscaled': runway.image})
 def upscale(model, inputs):
     img = np.array(inputs['image'])
     img = img * 1.0 / 255
-    img = torch.from_numpy(np.transpose(img[:, :, [2, 1, 0]], (2, 0, 1))).float()
-    img_LR = img.unsqueeze(0)
-    img_LR = img_LR.to(device)
-    output = model(img_LR).data.squeeze().float().cpu().clamp_(0, 1).numpy()
+    tiler = ImageSlicer(img.shape, tile_size=(512, 512), tile_step=(256, 256), weight='pyramid')
+    tiles = [process_tile(model, tile) for tile in tiler.split(img)]
+    output = tiler.merge(tiles)
     output = np.transpose(output[[2, 1, 0], :, :], (1, 2, 0))
     output = (output * 255.0).round().astype('uint8')
     return dict(upscaled=output)
+
+if __name__ == '__main__':
+    runway.run(port=4323)

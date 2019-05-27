@@ -1,3 +1,6 @@
 torch==1.0.0
 torchvision==0.2.1
 numpy==1.15.4
+runway-python
+opencv-python
+scikit-image
